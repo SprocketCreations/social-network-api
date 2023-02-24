@@ -33,10 +33,10 @@ db.once("open", async () => {
 					reactions: [
 						{
 							username: "BaldThor",
-							body: "What"
+							text: "What"
 						}, {
 							username: "Trex",
-							body: "Follow me on soundcloud"
+							text: "Follow me on soundcloud"
 						}
 					],
 				}, {
@@ -45,10 +45,10 @@ db.once("open", async () => {
 					reactions: [
 						{
 							username: "FastSnail",
-							body: "Then make a better one. Nerd."
+							text: "Then make a better one. Nerd."
 						}, {
 							username: "Trex",
-							body: "What is your opinion on music?"
+							text: "What is your opinion on music?"
 						}
 					],
 				}, {
@@ -57,7 +57,7 @@ db.once("open", async () => {
 					reactions: [
 						{
 							username: "FastSnail",
-							body: "Can you stop spamming everyone about your music?"
+							text: "Can you stop spamming everyone about your music?"
 						}
 					],
 				}

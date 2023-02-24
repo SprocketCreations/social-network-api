@@ -5,9 +5,9 @@ const mongoose = require("mongoose");
 const reactionSchema = mongoose.Schema({
 	reactionId: {
 		type: ObjectId,
-		default: new ObjectId()
+		default: ObjectId
 	},
-	body: {
+	text: {
 		type: String,
 		//required
 		//character limit 1 -> 280 
