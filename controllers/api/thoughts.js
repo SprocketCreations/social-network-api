@@ -1,4 +1,5 @@
 const { isValidObjectId } = require("mongoose");
+const db = require("../../config/connection");
 const { Thought, User } = require("../../models");
 
 const thoughts = require("express").Router();
@@ -36,19 +37,26 @@ thoughts.get("/:id", async (req, res) => {
 thoughts.post("/", async (req, res) => {
 	try {
 		if (isValidObjectId(req.body.userId)) {
-			const user = await User.findById(req.body.userId);
-			if (user) {
-				const thought = await Thought.create({
-					body: req.body.body,
-					username: user.username
-				});
-				if (thought) {
-					// I guessed at this part and it worked???
+			try {
+				let thought = null;
+				await db.transaction(async session => {
+					// Get user
+					const user = await User.findById(req.body.userId);
+					if (!user) throw new Error("User does not exist!");
+					thought = await Thought.create({
+						text: req.body.text,
+						username: user.username
+					});
+					if (!thought) throw new Error("Failed to create thought!");
+
 					user.thoughts.push(thought._id);
-					//TODO:?? somehow await this operation?
 					user.save();
-					return res.status(201).json({ thought });
-				}
+					//TODO: Throw error if save failed...
+				});
+				return res.status(201).json({ thought });
+			} catch (error) {
+				console.log(error)
+				return res.sendStatus(400);
 			}
 		}
 		return res.sendStatus(400);
@@ -95,24 +103,57 @@ thoughts.delete("/:id", async (req, res) => {
 
 thoughts.post("/:thoughtId/reactions", async (req, res) => {
 	try {
-		if (isValidObjectId(req.params.thoughtId)) {
-
+		if (isValidObjectId(req.params.thoughtId) &&
+			isValidObjectId(req.body.userId)) {
+			try {
+				let reaction = null;
+				//Create a reaction and add it to the thought's table
+				await db.transaction(async session => {
+					const user = await User.findById(req.body.userId);
+					if (!user) throw new Error("User does not exist!");
+					reaction = {
+						username: user.username,
+						text: req.body.text,
+					};
+					const thought = await Thought.findByIdAndUpdate(
+						req.params.thoughtId, {
+						$push: {
+							reactions: reaction
+						}
+					});
+					if (!thought) throw new Error("Failed to make reaction!");
+				});
+				return res.status(201).json({ reaction });
+			} catch (error) {
+				console.log(error);
+				return res.sendStatus(400);
+			}
 		}
 		return res.sendStatus(404);
 	} catch (error) {
 		console.log(error);
 		return res.sendStatus(500);
 	}
-	//Create a reaction and add it to the thought's table
 });
 
 thoughts.delete("/:thoughtId/reactions/:reactionId", async (req, res) => {
 	try {
 		if (isValidObjectId(req.params.thoughtId) &&
-			await Thought.findById(req.params.thoughtId) &&
 			isValidObjectId(req.params.reactionId)) {
 
-			
+			const thought = await Thought.findByIdAndUpdate(req.params.thoughtId, {
+				$pull: {
+					reactions: {
+						reactionId: req.params.reactionId
+					}
+				}
+			});
+			if (thought &&
+				thought.reactions.find(reaction => reaction.reactionId.equals(req.params.reactionId))
+			) {
+				console.log(thought);
+				return res.json({ rows: 1 });
+			}
 		}
 		return res.sendStatus(404);
 	} catch (error) {
