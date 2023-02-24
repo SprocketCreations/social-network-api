@@ -40,7 +40,7 @@ const thoughtSchema = mongoose.Schema({
 	createdAt: {
 		type: Date,
 		default: Date.now,
-		get: date => console.log(dayjs(date).format("MM/DD/YYYY")),
+		get: date => dayjs(date).format("MM/DD/YYYY"),
 	},
 	username: {
 		type: String,

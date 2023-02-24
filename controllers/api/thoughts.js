@@ -10,7 +10,7 @@ thoughts.get("/", async (req, res) => {
 	try {
 		const thoughts = await Thought.find();
 		if (thoughts) {
-			return res.json({ thoughts });
+			return res.json({ thoughts: thoughts });
 		}
 		return res.sendStatus(404);
 	} catch (error) {
@@ -24,7 +24,7 @@ thoughts.get("/:id", async (req, res) => {
 		if (isValidObjectId(req.params.id)) {
 			const thought = await Thought.findById(req.params.id);
 			if (thought) {
-				return res.json({ thought });
+				return res.json({ thought: thought });
 			}
 		}
 		return res.sendStatus(404);
@@ -53,7 +53,7 @@ thoughts.post("/", async (req, res) => {
 					user.save();
 					//TODO: Throw error if save failed...
 				});
-				return res.status(201).json({ thought });
+				return res.status(201).json({ thought: thought });
 			} catch (error) {
 				console.log(error)
 				return res.sendStatus(400);
@@ -85,10 +85,30 @@ thoughts.put("/:id", async (req, res) => {
 
 thoughts.delete("/:id", async (req, res) => {
 	try {
-		if (isValidObjectId(req.params.id) &&
-			await Thought.findByIdAndDelete(req.params.id)) {
+		if (isValidObjectId(req.params.id)) {
+			try {
+				let rows = 0;
+				await db.transaction(async session => {
+					const thought = await Thought.findByIdAndDelete(req.params.id);
+					if (!thought) throw new Error("Thought does not exist!");
+					++rows;
+					const user = await User.findOneAndUpdate({
+						username: thought.username
+					}, {
+						$pull: {
+							thoughts: thought._id,
+						}
+					});
+					if (user)
+						++rows;
+					else
+						console.log("User could not be found!")
 
-			return res.json({ rows: 1 });
+				});
+				return res.json({ rows: rows });
+			} catch (error) {
+				console.log(error);
+			}
 		}
 		return res.sendStatus(404);
 	} catch (error) {
@@ -123,7 +143,7 @@ thoughts.post("/:thoughtId/reactions", async (req, res) => {
 					});
 					if (!thought) throw new Error("Failed to make reaction!");
 				});
-				return res.status(201).json({ reaction });
+				return res.status(201).json({ reaction: reaction });
 			} catch (error) {
 				console.log(error);
 				return res.sendStatus(400);
